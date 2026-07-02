@@ -1,34 +1,48 @@
 # MRI Brain Tumor Classification
 
-This repository is a runnable Python project refactored from the Kaggle notebook
-`brain-tumor-mri-accuracy-99.ipynb`.
+[![CI](https://github.com/3289960996-hub/MRI-BrainTumor-Classification/actions/workflows/ci.yml/badge.svg)](https://github.com/3289960996-hub/MRI-BrainTumor-Classification/actions/workflows/ci.yml)
 
-The model logic is preserved from the original notebook. The project uses an
-ImageNet-pretrained Xception backbone followed by Flatten, Dropout, Dense,
-Dropout, and a 4-class Softmax output layer.
+Production-style Python project for MRI brain tumor image classification,
+refactored from the Kaggle notebook `brain-tumor-mri-accuracy-99.ipynb`.
 
-## Features
+The model algorithm is intentionally unchanged from the notebook:
 
-- Load MRI image folders into Pandas dataframes
-- Split the original testing set into validation and test subsets
-- Apply the same Keras `ImageDataGenerator` preprocessing used in the notebook
-- Train the original Xception-based classifier
-- Evaluate train, validation, and test metrics
-- Plot training curves and confusion matrix
-- Save trained model, class indices, and training history
-- Predict a single MRI image from the command line
+- ImageNet-pretrained `Xception`
+- `Flatten`
+- `Dropout(0.3)`
+- `Dense(128, activation="relu")`
+- `Dropout(0.25)`
+- `Dense(4, activation="softmax")`
+- `Adamax(learning_rate=0.001)`
+- `categorical_crossentropy`
+- metrics: accuracy, precision, recall
+
+This repository focuses on engineering the notebook into a runnable machine
+learning project without redesigning the model.
 
 ## Project Structure
 
 ```text
 .
+├── .github/workflows/ci.yml
+├── artifacts/
+│   └── .gitkeep
+├── configs/
+│   └── default.yaml
+├── data/
+│   └── .gitkeep
+├── tests/
+│   ├── test_cli.py
+│   └── test_config.py
+├── config.py
 ├── dataset.py
 ├── model.py
-├── train.py
 ├── predict.py
+├── train.py
 ├── utils.py
 ├── requirements.txt
-├── .gitignore
+├── requirements-dev.txt
+├── LICENSE
 └── README.md
 ```
 
@@ -50,40 +64,72 @@ brain-tumor-mri-dataset/
     └── pituitary/
 ```
 
-The original notebook paths are used as defaults:
+The code supports common image extensions:
 
 ```text
-/kaggle/input/brain-tumor-mri-dataset/Training
-/kaggle/input/brain-tumor-mri-dataset/Testing
+.jpg, .jpeg, .png, .bmp, .tif, .tiff
 ```
 
-For local Windows usage, pass your local dataset paths through command-line
-arguments.
+The original Kaggle paths are stored in `configs/default.yaml`:
+
+```yaml
+data:
+  train_dir: /kaggle/input/brain-tumor-mri-dataset/Training
+  test_dir: /kaggle/input/brain-tumor-mri-dataset/Testing
+```
+
+For local training, pass your own dataset paths with command-line arguments.
 
 ## Installation
 
-Create and activate a virtual environment:
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\activate
-```
-
-Install dependencies:
-
-```powershell
 pip install -r requirements.txt
 ```
 
+For tests and CI-like checks:
+
+```powershell
+pip install -r requirements-dev.txt
+```
+
+## Configuration
+
+Default training settings live in:
+
+```text
+configs/default.yaml
+```
+
+Current defaults match the original notebook:
+
+```yaml
+training:
+  epochs: 10
+  batch_size: 32
+  img_size: [299, 299]
+```
+
+You can either edit the YAML file or override values from the command line.
+
 ## Training
 
-Run with Kaggle-style default paths:
+Using defaults from `configs/default.yaml`:
 
 ```powershell
 python train.py
 ```
 
-Run with local dataset paths:
+Using a custom config:
+
+```powershell
+python train.py --config configs/default.yaml
+```
+
+Using local Windows dataset paths:
 
 ```powershell
 python train.py `
@@ -91,7 +137,7 @@ python train.py `
   --test-dir "C:\path\to\brain-tumor-mri-dataset\Testing"
 ```
 
-Useful options:
+Useful overrides:
 
 ```powershell
 python train.py --epochs 10 --batch-size 32 --output-dir artifacts
@@ -109,7 +155,7 @@ artifacts/
 
 ## Prediction
 
-After training, predict one MRI image:
+After training, predict a single MRI image:
 
 ```powershell
 python predict.py `
@@ -118,27 +164,65 @@ python predict.py `
   --class-indices artifacts\class_indices.json
 ```
 
-Print probabilities without opening the plot window:
+If you use the default artifact paths from `configs/default.yaml`, this is
+enough:
+
+```powershell
+python predict.py --image "C:\path\to\image.jpg"
+```
+
+Print probabilities without opening a plot window:
 
 ```powershell
 python predict.py --image "C:\path\to\image.jpg" --no-show
 ```
 
+## Testing
+
+Run lightweight tests:
+
+```powershell
+pytest -q
+```
+
+The tests intentionally avoid full training because that requires the MRI
+dataset and TensorFlow runtime. CI checks syntax, CLI entry points, and config
+helpers.
+
+## CI
+
+GitHub Actions is configured in:
+
+```text
+.github/workflows/ci.yml
+```
+
+It runs on push and pull request to `main`:
+
+- Python setup
+- lightweight dependency installation
+- syntax compilation
+- pytest checks
+
 ## File Responsibilities
 
-- `dataset.py`: dataset folder validation, dataframe creation, validation/test
-  split, and Keras image generator creation.
-- `model.py`: original Xception-based Keras model definition and compilation.
-- `train.py`: command-line training entry point with fit, validation, metrics,
+- `config.py`: YAML config loading and nested config lookup.
+- `dataset.py`: dataset validation, dataframe creation, validation/test split,
+  and Keras `ImageDataGenerator` setup.
+- `model.py`: original Xception model definition and compilation.
+- `train.py`: runnable training entry point with fit, validation, evaluation,
   plots, and artifact saving.
-- `predict.py`: command-line single-image prediction.
-- `utils.py`: plotting, evaluation, class-index serialization, and training
-  history helpers.
+- `predict.py`: runnable single-image prediction entry point.
+- `utils.py`: plotting, evaluation, serialization, and helper utilities.
 
-## Notes
+## Medical Disclaimer
 
-- The model architecture and training logic are intentionally kept aligned with
-  the original notebook.
-- Large generated files such as trained models and datasets are ignored by Git.
-- If TensorFlow cannot use GPU on your machine, it will still run on CPU but
-  training will be slower.
+This project is for learning and software engineering demonstration only. It is
+not a medical device and must not be used for clinical diagnosis or treatment
+decisions.
+
+See `MODEL_CARD.md` for intended use, limitations, and evaluation notes.
+
+## License
+
+MIT License. See `LICENSE`.

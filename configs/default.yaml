@@ -1,0 +1,12 @@
+data:
+  train_dir: /kaggle/input/brain-tumor-mri-dataset/Training
+  test_dir: /kaggle/input/brain-tumor-mri-dataset/Testing
+
+training:
+  epochs: 10
+  batch_size: 32
+  img_size: [299, 299]
+
+output:
+  dir: artifacts
+  model_name: brain_tumor_xception.keras
