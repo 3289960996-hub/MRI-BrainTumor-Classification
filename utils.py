@@ -71,7 +71,7 @@ def plot_samples(generator):
     plt.show()
 
 
-def plot_training_history(hist):
+def plot_training_history(hist, save_path=None, show=True):
     tr_acc = hist.history["accuracy"]
     tr_loss = hist.history["loss"]
     tr_per = hist.history["precision"]
@@ -140,7 +140,13 @@ def plot_training_history(hist):
     plt.grid(True)
 
     plt.suptitle("Model Training Metrics Over Epochs", fontsize=16)
-    plt.show()
+    if save_path:
+        ensure_dir(os.path.dirname(save_path))
+        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 
 def evaluate_model(model, tr_gen, valid_gen, ts_gen):
@@ -160,7 +166,7 @@ def evaluate_model(model, tr_gen, valid_gen, ts_gen):
     return train_score, valid_score, test_score
 
 
-def plot_confusion_matrix(model, ts_gen, class_dict):
+def plot_confusion_matrix(model, ts_gen, class_dict, save_path=None, show=True):
     preds = model.predict(ts_gen)
     y_pred = np.argmax(preds, axis=1)
     cm = confusion_matrix(ts_gen.classes, y_pred)
@@ -177,8 +183,37 @@ def plot_confusion_matrix(model, ts_gen, class_dict):
     )
     plt.xlabel("Predicted Label")
     plt.ylabel("Truth Label")
-    plt.show()
+    if save_path:
+        ensure_dir(os.path.dirname(save_path))
+        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     clr = classification_report(ts_gen.classes, y_pred)
     print(clr)
     return y_pred
+
+
+def save_prediction_errors(ts_gen, y_pred, class_dict, output_path):
+    labels = [label for label, _ in sorted(class_dict.items(), key=lambda item: item[1])]
+    rows = []
+    for path, true_idx, pred_idx in zip(ts_gen.filepaths, ts_gen.classes, y_pred):
+        if true_idx != pred_idx:
+            rows.append(
+                {
+                    "image_path": path,
+                    "true_label": labels[true_idx],
+                    "predicted_label": labels[pred_idx],
+                }
+            )
+
+    ensure_dir(os.path.dirname(output_path))
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("image_path,true_label,predicted_label\n")
+        for row in rows:
+            f.write(
+                f"{row['image_path']},{row['true_label']},{row['predicted_label']}\n"
+            )
+    return rows

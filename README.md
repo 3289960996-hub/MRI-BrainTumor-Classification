@@ -151,6 +151,12 @@ artifacts/
 ├── brain_tumor_xception.keras
 ├── class_indices.json
 └── training_history.json
+
+reports/
+├── figures/
+│   ├── training_history.png
+│   └── confusion_matrix.png
+└── prediction_errors.csv
 ```
 
 ## Prediction
@@ -183,6 +189,20 @@ Run lightweight tests:
 
 ```powershell
 pytest -q
+```
+
+## Error Analysis
+
+After training, export misclassified test images:
+
+```powershell
+python analyze_errors.py
+```
+
+Experiment notes can be tracked in:
+
+```text
+experiments/results.md
 ```
 
 The tests intentionally avoid full training because that requires the MRI

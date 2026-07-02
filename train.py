@@ -44,6 +44,7 @@ def main():
         plot_training_history,
         save_class_indices,
         save_history,
+        save_prediction_errors,
     )
 
     cfg = load_config(args.config)
@@ -96,9 +97,41 @@ def main():
 
     evaluate_model(model, tr_gen, valid_gen, ts_gen)
 
+    figures_dir = os.path.join("reports", "figures")
     if not args.no_plots:
-        plot_training_history(hist)
-        plot_confusion_matrix(model, ts_gen, class_dict)
+        plot_training_history(
+            hist,
+            save_path=os.path.join(figures_dir, "training_history.png"),
+            show=True,
+        )
+        y_pred = plot_confusion_matrix(
+            model,
+            ts_gen,
+            class_dict,
+            save_path=os.path.join(figures_dir, "confusion_matrix.png"),
+            show=True,
+        )
+    else:
+        plot_training_history(
+            hist,
+            save_path=os.path.join(figures_dir, "training_history.png"),
+            show=False,
+        )
+        y_pred = plot_confusion_matrix(
+            model,
+            ts_gen,
+            class_dict,
+            save_path=os.path.join(figures_dir, "confusion_matrix.png"),
+            show=False,
+        )
+
+    error_rows = save_prediction_errors(
+        ts_gen,
+        y_pred,
+        class_dict,
+        os.path.join("reports", "prediction_errors.csv"),
+    )
+    print(f"Saved {len(error_rows)} prediction errors to reports/prediction_errors.csv")
 
     model_path = os.path.join(args.output_dir, model_name)
     model.save(model_path)
