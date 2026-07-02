@@ -1,13 +1,18 @@
 import subprocess
 import sys
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_help(script_name):
     result = subprocess.run(
-        [sys.executable, script_name, "--help"],
+        [sys.executable, str(REPO_ROOT / script_name), "--help"],
         check=False,
         capture_output=True,
         text=True,
+        cwd=REPO_ROOT,
     )
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout
