@@ -4,33 +4,54 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff")
+
+
+def validate_dataset_dir(data_dir):
+    if not os.path.isdir(data_dir):
+        raise FileNotFoundError(
+            f"Dataset directory not found: {data_dir}. "
+            "Expected a folder with one subfolder per class."
+        )
+
+    class_names = [
+        label
+        for label in os.listdir(data_dir)
+        if os.path.isdir(os.path.join(data_dir, label))
+    ]
+    if not class_names:
+        raise ValueError(
+            f"No class folders found in: {data_dir}. "
+            "Expected subfolders such as glioma, meningioma, notumor, pituitary."
+        )
+
+    return class_names
+
+
+def build_dataframe(data_dir):
+    validate_dataset_dir(data_dir)
+
+    records = [
+        (label, os.path.join(data_dir, label, image))
+        for label in os.listdir(data_dir)
+        if os.path.isdir(os.path.join(data_dir, label))
+        for image in os.listdir(os.path.join(data_dir, label))
+        if image.lower().endswith(IMAGE_EXTENSIONS)
+    ]
+
+    if not records:
+        raise ValueError(f"No image files found in dataset directory: {data_dir}")
+
+    classes, class_paths = zip(*records)
+    return pd.DataFrame({"Class Path": class_paths, "Class": classes})
+
 
 def train_df(tr_path):
-    classes, class_paths = zip(
-        *[
-            (label, os.path.join(tr_path, label, image))
-            for label in os.listdir(tr_path)
-            if os.path.isdir(os.path.join(tr_path, label))
-            for image in os.listdir(os.path.join(tr_path, label))
-        ]
-    )
-
-    tr_df = pd.DataFrame({"Class Path": class_paths, "Class": classes})
-    return tr_df
+    return build_dataframe(tr_path)
 
 
 def test_df(ts_path):
-    classes, class_paths = zip(
-        *[
-            (label, os.path.join(ts_path, label, image))
-            for label in os.listdir(ts_path)
-            if os.path.isdir(os.path.join(ts_path, label))
-            for image in os.listdir(os.path.join(ts_path, label))
-        ]
-    )
-
-    ts_df = pd.DataFrame({"Class Path": class_paths, "Class": classes})
-    return ts_df
+    return build_dataframe(ts_path)
 
 
 def split_test_valid(ts_df, train_size=0.5, random_state=20):
@@ -41,6 +62,17 @@ def split_test_valid(ts_df, train_size=0.5, random_state=20):
         stratify=ts_df["Class"],
     )
     return valid_df, ts_df
+
+
+def load_datasets(train_dir, test_dir, valid_train_size=0.5, random_state=20):
+    tr_df = train_df(train_dir)
+    ts_df = test_df(test_dir)
+    valid_df, ts_df = split_test_valid(
+        ts_df,
+        train_size=valid_train_size,
+        random_state=random_state,
+    )
+    return tr_df, valid_df, ts_df
 
 
 def create_generators(

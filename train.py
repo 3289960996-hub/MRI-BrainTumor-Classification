@@ -2,15 +2,6 @@ import argparse
 import os
 import warnings
 
-from dataset import create_generators, split_test_valid, test_df, train_df
-from model import build_model
-from utils import (
-    evaluate_model,
-    plot_confusion_matrix,
-    plot_training_history,
-    save_class_indices,
-)
-
 warnings.filterwarnings("ignore")
 
 
@@ -37,11 +28,24 @@ def parse_args():
 
 def main():
     args = parse_args()
-    os.makedirs(args.output_dir, exist_ok=True)
 
-    tr_df = train_df(args.train_dir)
-    ts_df = test_df(args.test_dir)
-    valid_df, ts_df = split_test_valid(ts_df)
+    from dataset import create_generators, load_datasets
+    from model import build_model
+    from utils import (
+        ensure_dir,
+        evaluate_model,
+        plot_confusion_matrix,
+        plot_training_history,
+        save_class_indices,
+        save_history,
+    )
+
+    ensure_dir(args.output_dir)
+
+    tr_df, valid_df, ts_df = load_datasets(args.train_dir, args.test_dir)
+    print(f"Training images: {len(tr_df)}")
+    print(f"Validation images: {len(valid_df)}")
+    print(f"Testing images: {len(ts_df)}")
 
     tr_gen, valid_gen, ts_gen = create_generators(
         tr_df,
@@ -66,6 +70,7 @@ def main():
         validation_data=valid_gen,
         shuffle=False,
     )
+    save_history(hist, os.path.join(args.output_dir, "training_history.json"))
 
     evaluate_model(model, tr_gen, valid_gen, ts_gen)
 

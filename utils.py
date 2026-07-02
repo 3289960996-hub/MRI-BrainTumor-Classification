@@ -1,4 +1,5 @@
 import json
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,14 +7,42 @@ import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix
 
 
+def ensure_dir(path):
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def save_class_indices(class_indices, output_path):
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        ensure_dir(output_dir)
+
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(class_indices, f, ensure_ascii=False, indent=2)
 
 
 def load_class_indices(path):
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            f"Class index file not found: {path}. "
+            "Run train.py first or pass --class-indices."
+        )
+
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def save_history(history, output_path):
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        ensure_dir(output_dir)
+
+    serializable_history = {
+        key: [float(value) for value in values]
+        for key, values in history.history.items()
+    }
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(serializable_history, f, ensure_ascii=False, indent=2)
 
 
 def plot_class_counts(df, title="Count of images in each class"):
@@ -135,7 +164,7 @@ def plot_confusion_matrix(model, ts_gen, class_dict):
     preds = model.predict(ts_gen)
     y_pred = np.argmax(preds, axis=1)
     cm = confusion_matrix(ts_gen.classes, y_pred)
-    labels = list(class_dict.keys())
+    labels = [label for label, _ in sorted(class_dict.items(), key=lambda item: item[1])]
 
     plt.figure(figsize=(10, 8))
     sns.heatmap(

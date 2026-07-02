@@ -1,15 +1,16 @@
 import argparse
-
-import matplotlib.pyplot as plt
-import numpy as np
-from PIL import Image
-from tensorflow.keras.models import load_model
-
-from utils import load_class_indices
+import os
 
 
 def predict(img_path, model, class_dict, img_size=(299, 299), show=True):
-    label = list(class_dict.keys())
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from PIL import Image
+
+    if not os.path.isfile(img_path):
+        raise FileNotFoundError(f"Image not found: {img_path}")
+
+    label = [name for name, _ in sorted(class_dict.items(), key=lambda item: item[1])]
     img = Image.open(img_path)
     resized_img = img.resize(img_size)
     img = np.asarray(resized_img)
@@ -53,6 +54,15 @@ def parse_args():
 
 def main():
     args = parse_args()
+    from tensorflow.keras.models import load_model
+
+    from utils import load_class_indices
+
+    if not os.path.isfile(args.model):
+        raise FileNotFoundError(
+            f"Model file not found: {args.model}. Run train.py first or pass --model."
+        )
+
     model = load_model(args.model)
     class_dict = load_class_indices(args.class_indices)
     result = predict(
